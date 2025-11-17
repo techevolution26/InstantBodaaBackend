@@ -10,6 +10,8 @@ use App\Http\Controllers\DeliveryOrderController;
 use App\Http\Controllers\ProviderLocationController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\MpesaController;
+
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login',    [AuthController::class, 'login']);
@@ -51,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
   Route::post('wallet/savings',     [WalletController::class,'modifySavings']);  // deposit/withdraw
   Route::post('wallet/loan',        [WalletController::class,'requestLoan']);    // new loan
   Route::post('wallet/loan/repay',  [WalletController::class,'repayLoan']);      // repayment
+  Route::post('wallet/fund',       [MpesaController::class,'fund']);
+  Route::post('mpesa/callback',    [MpesaController::class,'callback']);
 });
 
     //public API endpoints
