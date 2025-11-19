@@ -11,23 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('service_requests', function (Blueprint $table) {
+        Schema::create('service_requests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->unsignedBigInteger('provider_id')->nullable();
-            $table->decimal('pickup_lat',  10, 7);
-            $table->decimal('pickup_lng',  10, 7);
+            $table->decimal('pickup_lat', 10, 7);
+            $table->decimal('pickup_lng', 10, 7);
             $table->decimal('dropoff_lat', 10, 7);
             $table->decimal('dropoff_lng', 10, 7);
             $table->enum('status', [
-                'pending','assigned','in_progress','completed','cancelled'
+                'pending', 'assigned', 'in_progress', 'completed', 'cancelled',
             ])->default('pending');
             $table->timestamp('requested_at')->useCurrent();
             $table->timestamp('assigned_at')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
+            $table->decimal('distance_km', 8, 3)->nullable();
+            $table->integer('eta_minutes')->nullable();
             $table->decimal('fare_estimate', 8, 2)->nullable();
-            $table->decimal('fare_actual',   8, 2)->nullable();
+            $table->decimal('fare_actual', 8, 2)->nullable();
             $table->timestamps();
 
             $table->foreign('provider_id')->references('user_id')->on('service_providers');

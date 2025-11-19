@@ -12,19 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-    $table->id();
-    $table->string('name');
-    $table->string('email')->unique();
-    $table->string('phone')->unique();
-    $table->string('password');
-    $table->boolean('is_provider')->default(false);
-    $table->date('dob')->nullable();
-    $table->string('blood_group', 5)->nullable(); // Added length limit
-    $table->string('address')->nullable();
-    $table->string('avatar_url')->nullable();
-    $table->rememberToken();
-    $table->timestamps();
-});
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->string('phone')->unique();
+            $table->string('password');
+            $table->boolean('is_provider')->default(false);
+            $table->date('dob')->nullable();
+            $table->string('blood_group', 5)->nullable();
+            $table->string('address')->nullable();
+            $table->decimal('last_lat', 10, 6)->nullable();
+            $table->decimal('last_lng', 10, 6)->nullable();
+            $table->timestamp('last_location_at')->nullable();
+            $table->string('avatar_url')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+        });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();

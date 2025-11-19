@@ -15,71 +15,100 @@ class GeoController extends Controller {
     * @return \Illuminate\Http\JsonResponse
     */
 
-    public function reverse( Request $request ) {
-        $lat = $request->query( 'lat' );
-        $lon = $request->query( 'lon' );
+   public function reverse(Request $request)
+{
+    $lat = $request->query('lat');
+    $lon = $request->query('lon');
 
-        if ( ! $lat || ! $lon ) {
-            return response()->json( [ 'error' => 'Missing lat or lon' ], 400 );
-        }
+    if (!isset($lat, $lon) || !is_numeric($lat) || !is_numeric($lon)) {
+        return response()->json(['error' => 'Missing or invalid lat/lon'], 400);
+    }
 
-        // Normalize to fixed precision strings
-        $latKey = number_format( ( float )$lat, 6, '.', '' );
-        $lonKey = number_format( ( float )$lon, 6, '.', '' );
+    $latKey = number_format((float)$lat, 6, '.', '');
+    $lonKey = number_format((float)$lon, 6, '.', '');
 
-        //Try to fetch from our cache table
-        $cache = AddressCache::where( 'lat', $latKey )
-        ->where( 'lon', $lonKey )
-        ->first();
+    // Cache lookup
+    $cache = AddressCache::where('lat', $latKey)->where('lon', $lonKey)->first();
+    if ($cache) {
+        return response()->json([
+            'display_name' => $cache->formatted,
+            'components'   => $cache->components,
+            'cached'       => true,
+            'found'        => true,
+        ], 200);
+    }
 
-        if ( $cache ) {
-            return response()->json( [
-                'display_name' => $cache->formatted,
-                'components'   => $cache->components,
-                'cached'       => true,
-            ] );
-        }
+    $apiKey = env('OPENCAGE_API_KEY');
+    if (!$apiKey) {
+        // dev-friendly: still return coords so UI behaves
+        $fallback = "($latKey, $lonKey)";
+        return response()->json([
+            'display_name' => $fallback,
+            'components' => null,
+            'cached' => false,
+            'found' => false,
+            'error' => 'Geocoding key not configured'
+        ], 200);
+    }
 
-        //If not cached, hit OpenCage
-        try {
-            $response = Http::timeout( 10 )
-            ->get( 'https://api.opencagedata.com/geocode/v1/json', [
+    try {
+        $response = Http::timeout(10)
+            ->get('https://api.opencagedata.com/geocode/v1/json', [
                 'q'              => "$lat,$lon",
-                'key'            => env( 'OPENCAGE_API_KEY' ),
+                'key'            => $apiKey,
                 'language'       => 'en',
                 'no_annotations' => 1,
-            ] );
+            ]);
 
-            $json = $response->json();
+        $json = $response->json();
 
-            if ( empty( $json[ 'results' ][ 0 ][ 'formatted' ] ) ) {
-                return response()->json( [ 'error' => 'No address found' ], 404 );
-            }
-
-            $result      = $json[ 'results' ][ 0 ];
-            $formatted   = $result[ 'formatted' ];
-            $components  = $result[ 'components' ] ?? null;
-
-            // 3 ) Store in our cache table
-            AddressCache::create( [
-                'lat'       => $latKey,
-                'lon'       => $lonKey,
-                'formatted' => $formatted,
-                'components'=> $components,
-            ] );
-
-            // 4 ) Return to client
-            return response()->json( [
-                'display_name' => $formatted,
-                'components'   => $components,
+        if (empty($json['results'][0]['formatted'])) {
+            // No address — return coords as display_name with found:false but 200 OK
+            $fallback = "($latKey, $lonKey)";
+            AddressCache::create([
+                'lat' => $latKey,
+                'lon' => $lonKey,
+                'formatted' => $fallback,
+                'components' => null,
+            ]);
+            return response()->json([
+                'display_name' => $fallback,
+                'components'   => null,
                 'cached'       => false,
-            ] );
-        } catch ( \Exception $e ) {
-            return response()->json( [
-                'error'   => 'Geocoding failed',
-                'details' => $e->getMessage(),
-            ], 500 );
+                'found'        => false,
+            ], 200);
         }
+
+        $result = $json['results'][0];
+        $formatted = $result['formatted'];
+        $components = $result['components'] ?? null;
+
+        AddressCache::create([
+            'lat'       => $latKey,
+            'lon'       => $lonKey,
+            'formatted' => $formatted,
+            'components'=> $components,
+        ]);
+
+        return response()->json([
+            'display_name' => $formatted,
+            'components'   => $components,
+            'cached'       => false,
+            'found'        => true,
+        ], 200);
+    } catch (\Exception $e) {
+        $fallback = "($latKey, $lonKey)";
+        // Return 200 with display_name fallback to avoid broken UI
+        return response()->json([
+            'display_name' => $fallback,
+            'components' => null,
+            'cached' => false,
+            'found' => false,
+            'error' => 'Geocoding failed',
+            'details' => $e->getMessage(),
+        ], 200);
     }
+}
+
 
 }
