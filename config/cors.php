@@ -5,8 +5,12 @@ return [
     'allowed_methods' => [ '*' ],
     'allowed_origins' => [
         'http://localhost:3000',
+        'https://instanst-bodaa-frntend.vercel.app',
         'http://127.0.0.1',
         'http://127.0.0.1:8000',
+    ],
+    'allowed_origins_patterns' => [
+        '^https:\/\/.*\.vercel\.app$',
     ],
     'allowed_headers' => [ '*' ],
     'exposed_headers' => [],
